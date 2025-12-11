@@ -2,6 +2,7 @@
 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { CommandPalette } from "@/components/command-palette";
 import { useAuthStore } from "@/store/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -26,6 +27,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <CommandPalette />
       <AppSidebar />
       <SidebarInset className="bg-background">
         <header className="flex h-12 shrink-0 items-center border-b border-border/40 px-4">

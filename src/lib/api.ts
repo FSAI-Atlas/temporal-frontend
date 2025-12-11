@@ -24,10 +24,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only clear token for auth endpoint failures, let queries handle 401 gracefully
     if (error.response?.status === 401) {
-      if (typeof window !== "undefined") {
+      const isAuthEndpoint = error.config?.url?.includes('/auth/');
+      if (isAuthEndpoint && typeof window !== "undefined") {
         localStorage.removeItem("token");
-        window.location.href = "/login";
       }
     }
     return Promise.reject(error);
@@ -54,6 +55,21 @@ export const userApi = {
   getApiKeySecret: (id: string) => api.get(`/user/api-keys/${id}/secret`),
 };
 
+// Tenant/Workspace API
+export const tenantApi = {
+  get: () => api.get("/tenant"),
+  create: (data: { name: string; description?: string }) => api.post("/tenant", data),
+  update: (data: { name?: string; description?: string }) => api.patch("/tenant", data),
+  getMembers: (params?: { page?: number; limit?: number }) =>
+    api.get("/tenant/members", { params }),
+  inviteMember: (data: { email: string; name: string; role: "admin" | "member" | "viewer" }) =>
+    api.post("/tenant/members/invite", data),
+  updateMemberRole: (memberId: string, role: "admin" | "member" | "viewer") =>
+    api.patch(`/tenant/members/${memberId}/role`, { role }),
+  removeMember: (memberId: string) => api.delete(`/tenant/members/${memberId}`),
+  getStats: () => api.get("/tenant/stats"),
+};
+
 // Workflows API
 export const workflowsApi = {
   list: (params?: { page?: number; limit?: number; namespace?: string; name?: string }) =>
@@ -63,6 +79,31 @@ export const workflowsApi = {
   getVersions: (name: string) => api.get(`/workflows/name/${name}/versions`),
   getNamespaces: () => api.get("/workflows/namespaces"),
   deactivate: (id: string) => api.patch(`/workflows/${id}/deactivate`),
+};
+
+// Executions API
+export const executionsApi = {
+  list: (params?: { 
+    workflowId?: string; 
+    workflowType?: string; 
+    status?: string;
+    pageSize?: number;
+    namespace?: string;
+  }) => api.get("/executions", { params }),
+  get: (workflowId: string, runId?: string) =>
+    api.get(`/executions/${workflowId}`, { params: { runId } }),
+  getHistory: (workflowId: string, runId?: string) =>
+    api.get(`/executions/${workflowId}/history`, { params: { runId } }),
+  getResult: (workflowId: string, runId?: string) =>
+    api.get(`/executions/${workflowId}/result`, { params: { runId } }),
+  query: (workflowId: string, queryType: string, args?: any[], runId?: string) =>
+    api.post(`/executions/${workflowId}/query`, { queryType, args }, { params: { runId } }),
+  signal: (workflowId: string, signalName: string, args?: any[], runId?: string) =>
+    api.post(`/executions/${workflowId}/signal`, { signalName, args }, { params: { runId } }),
+  cancel: (workflowId: string, runId?: string) =>
+    api.post(`/executions/${workflowId}/cancel`, {}, { params: { runId } }),
+  terminate: (workflowId: string, reason?: string, runId?: string) =>
+    api.post(`/executions/${workflowId}/terminate`, { reason }, { params: { runId } }),
 };
 
 // HITL API
@@ -77,3 +118,13 @@ export const hitlApi = {
     api.post(`/hitl/tasks/${id}/decision`, data),
 };
 
+// Settings API
+export const settingsApi = {
+  getProfile: () => api.get("/settings/profile"),
+  updateProfile: (data: { name?: string; email?: string }) =>
+    api.patch("/settings/profile", data),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    api.post("/settings/password", data),
+  getPreferences: () => api.get("/settings/preferences"),
+  deleteAccount: () => api.delete("/settings/account"),
+};
